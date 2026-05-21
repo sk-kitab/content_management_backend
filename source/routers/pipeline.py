@@ -4,11 +4,11 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.database import get_session, SessionLocal
-from backend.models import Summary, PipelineJob
-from backend.schemas import JobCreate, JobStatus
-from backend.services.voice_service import generate_voice_text
-from backend.services.audio_service import generate_audio
+from source.database import get_session, SessionLocal
+from source.models import Summary, PipelineJob
+from source.schemas import JobCreate, JobStatus
+from source.services.voice_service import generate_voice_text
+from source.services.audio_service import generate_audio
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 

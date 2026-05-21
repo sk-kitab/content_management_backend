@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import String, Boolean, Integer, Float, DateTime, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
-from backend.database import Base
+from source.database import Base
 
 class Summary(Base):
     __tablename__ = "summaries"

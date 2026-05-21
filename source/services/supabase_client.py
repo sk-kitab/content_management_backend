@@ -1,5 +1,5 @@
 import httpx
-from backend.config import settings
+from source.config import settings
 
 
 class SupabaseReviewClient:

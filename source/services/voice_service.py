@@ -2,7 +2,7 @@
 import json
 import tempfile
 from pathlib import Path
-from backend.config import settings
+from source.config import settings
 
 from modules.generate_voice_text import generate_voice_text_chapters_from_json
 

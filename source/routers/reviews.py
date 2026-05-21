@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from backend.schemas import SupabaseReviewOut, ReviewStats
-from backend.services.supabase_client import review_client
+from source.schemas import SupabaseReviewOut, ReviewStats
+from source.services.supabase_client import review_client
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 

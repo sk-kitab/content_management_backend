@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.database import get_session
-from backend.models import Summary
-from backend.schemas import (
+from source.database import get_session
+from source.models import Summary
+from source.schemas import (
     SummaryCard, SummaryDetail, SummaryPatch,
     KanbanBoard, KanbanColumn,
 )

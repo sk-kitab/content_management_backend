@@ -1,7 +1,7 @@
 # backend/database.py
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from backend.config import settings
+from source.config import settings
 
 def _make_async_url(url: str) -> str:
     return url.replace("postgresql://", "postgresql+asyncpg://", 1).split("?")[0] + "?ssl=require"

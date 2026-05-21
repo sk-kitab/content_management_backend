@@ -1,5 +1,5 @@
 # backend/services/audio_service.py
-from backend.config import settings
+from source.config import settings
 
 from modules.chapter_audio_processor import process_chapters_to_final_audio
 from modules.supabase_utils import replace_audio_in_supabase
