@@ -1,23 +1,24 @@
-# backend/routers/reviews.py
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from backend.database import get_session
-from backend.models import Review
-from backend.schemas import ReviewOut
+from fastapi import APIRouter, HTTPException
+from backend.schemas import SupabaseReviewOut, ReviewStats
+from backend.services.supabase_client import review_client
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 
-@router.get("/{linear_id}", response_model=list[ReviewOut])
-async def get_reviews(
-    linear_id: str,
-    language: str = "english",
-    session: AsyncSession = Depends(get_session),
-):
-    result = await session.execute(
-        select(Review).where(
-            Review.linear_id == linear_id,
-            Review.language == language,
-        ).order_by(Review.created_at.desc())
-    )
-    return [ReviewOut.model_validate(r) for r in result.scalars().all()]
+
+@router.get("/stats", response_model=ReviewStats)
+async def get_review_stats():
+    """Last month's review summary: approved vs requested-changes counts."""
+    return await review_client.get_last_month_stats()
+
+
+@router.get("/{linear_id}", response_model=list[SupabaseReviewOut])
+async def get_reviews(linear_id: str):
+    """
+    All reviews for a summary from the Supabase review DB.
+    Joins: summaries (linear_identifier) → content_assignments → reviews.
+    Returns rating + assignment status per review.
+    """
+    reviews = await review_client.get_reviews_for_linear_id(linear_id)
+    if not reviews:
+        raise HTTPException(404, f"No reviews found for {linear_id}")
+    return reviews

@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
     supabase_url: str = ""
     supabase_key: str = ""
+    review_supabase_url: str = ""
+    review_supabase_key: str = ""
     voice_texts_dir: str = "voice_texts"
     audios_root: str = "audios"
     input_dir: str = "input"

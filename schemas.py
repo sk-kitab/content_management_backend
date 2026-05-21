@@ -81,6 +81,26 @@ class ReviewOut(BaseModel):
     assignment_status: str | None
     created_at: datetime
 
+
+class SupabaseReviewOut(BaseModel):
+    id: str
+    assignment_id: str
+    reviewer_id: str | None
+    rating: int | None
+    is_verified: bool
+    created_at: datetime
+    feedback_details: Any
+    assignment_status: str | None
+    iteration_count: int | None
+
+
+class ReviewStats(BaseModel):
+    month: str
+    total_reviewed: int
+    approved: int
+    requested_changes: int
+    average_rating: float | None
+
 class FilterParams(BaseModel):
     language: str = "english"
     category: str | None = None
