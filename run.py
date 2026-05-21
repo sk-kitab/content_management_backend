@@ -1,8 +1,12 @@
 import sys
 import os
 
-# Add project root to path so `modules/` package is importable
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+here = os.path.dirname(os.path.abspath(__file__))
+
+# backend/ dir → resolves app.main correctly regardless of CWD
+sys.path.insert(0, here)
+# project root → resolves modules/ package
+sys.path.insert(0, os.path.dirname(here))
 
 import uvicorn
 
