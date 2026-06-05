@@ -35,7 +35,7 @@ async def test_transcript_returns_cached(tmp_path):
         "words": [{"word": "hello", "start": 0.0, "end": 0.5, "confidence": 0.99, "speaker": 0}],
         "duration": 2.0,
     }
-    (transcript_dir / "SUM-CACHED.json").write_text(json.dumps(cached))
+    (transcript_dir / "SUM-CACHED-english.json").write_text(json.dumps(cached))
 
     with patch("source.routers.review_labs.TRANSCRIPT_DIR", str(transcript_dir)):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -47,24 +47,30 @@ async def test_transcript_returns_cached(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_transcript_404_when_summary_missing():
+async def test_transcript_404_when_summary_missing(tmp_path):
+    transcript_dir = tmp_path / "transcripts"
+    transcript_dir.mkdir()
     session = _mock_session(None)
     app.dependency_overrides[get_session] = lambda: session
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        r = await client.get("/api/review-labs/DOES-NOT-EXIST/transcript")
+    with patch("source.routers.review_labs.TRANSCRIPT_DIR", str(transcript_dir)):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.get("/api/review-labs/DOES-NOT-EXIST/transcript")
 
     app.dependency_overrides.clear()
     assert r.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_transcript_400_when_no_audio_url():
+async def test_transcript_400_when_no_audio_url(tmp_path):
+    transcript_dir = tmp_path / "transcripts"
+    transcript_dir.mkdir()
     session = _mock_session(_make_summary(audio_url=None))
     app.dependency_overrides[get_session] = lambda: session
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        r = await client.get("/api/review-labs/SUM-TEST/transcript")
+    with patch("source.routers.review_labs.TRANSCRIPT_DIR", str(transcript_dir)):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.get("/api/review-labs/SUM-TEST/transcript")
 
     app.dependency_overrides.clear()
     assert r.status_code == 400
@@ -121,4 +127,4 @@ async def test_transcript_calls_deepgram_and_returns_words(tmp_path):
     assert len(data["words"]) == 1
     assert data["words"][0]["word"] == "hello"
     assert data["duration"] == 1.5
-    assert (transcript_dir / "SUM-TEST.json").exists()
+    assert (transcript_dir / "SUM-TEST-english.json").exists()

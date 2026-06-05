@@ -55,7 +55,7 @@ async def get_transcript(
     session: AsyncSession = Depends(get_session),
 ):
     os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
-    cache_path = os.path.join(TRANSCRIPT_DIR, f"{linear_id}.json")
+    cache_path = os.path.join(TRANSCRIPT_DIR, f"{linear_id}-{language}.json")
     if os.path.exists(cache_path):
         with open(cache_path) as f:
             return TranscriptResponse(**json.load(f))
@@ -76,7 +76,10 @@ async def get_transcript(
     ext = _infer_ext(summary.audio_url)
     audio_path = os.path.join(AUDIO_DIR, f"{linear_id}{ext}")
     if not os.path.exists(audio_path):
-        await _download_audio(summary.audio_url, audio_path)
+        try:
+            await _download_audio(summary.audio_url, audio_path)
+        except Exception as e:
+            raise HTTPException(500, f"Failed to download audio: {e}")
 
     api_key = os.getenv("deepgram_apikey")
     if not api_key:
@@ -103,17 +106,21 @@ async def get_transcript(
     words = []
     duration = 0.0
     if response and response.results and response.results.channels:
-        alt = response.results.channels[0].alternatives[0]
-        words_list = getattr(alt, "words", []) or []
-        for w in words_list:
-            w_dict = w if isinstance(w, dict) else (w.model_dump() if hasattr(w, "model_dump") else {})
-            words.append({
-                "word": getattr(w, "word", w_dict.get("word", "")),
-                "start": getattr(w, "start", w_dict.get("start", 0.0)),
-                "end": getattr(w, "end", w_dict.get("end", 0.0)),
-                "confidence": getattr(w, "confidence", w_dict.get("confidence", 0.0)),
-                "speaker": getattr(w, "speaker", w_dict.get("speaker", None)),
-            })
+        channel = response.results.channels[0]
+        if not channel.alternatives:
+            pass  # skip word extraction
+        else:
+            alt = channel.alternatives[0]
+            words_list = getattr(alt, "words", []) or []
+            for w in words_list:
+                w_dict = w if isinstance(w, dict) else (w.model_dump() if hasattr(w, "model_dump") else {})
+                words.append({
+                    "word": getattr(w, "word", w_dict.get("word", "")),
+                    "start": getattr(w, "start", w_dict.get("start", 0.0)),
+                    "end": getattr(w, "end", w_dict.get("end", 0.0)),
+                    "confidence": getattr(w, "confidence", w_dict.get("confidence", 0.0)),
+                    "speaker": getattr(w, "speaker", w_dict.get("speaker", None)),
+                })
         if response.metadata:
             meta = response.metadata
             meta_dict = meta if isinstance(meta, dict) else (meta.model_dump() if hasattr(meta, "model_dump") else {})
