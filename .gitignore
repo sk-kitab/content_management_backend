@@ -55,3 +55,9 @@ logs/
 # SQLite (dev db)
 *.db
 *.sqlite3
+
+# Temporary files (Review Labs)
+tmp/transcripts/*.json
+tmp/audio/*
+tmp/exports/*
+!tmp/**/.gitkeep
