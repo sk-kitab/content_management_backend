@@ -7,7 +7,7 @@ from typing import Literal
 import httpx
 from deepgram import DeepgramClient
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -140,10 +140,19 @@ class EditRange(BaseModel):
     start: float
     end: float
 
+    @model_validator(mode="after")
+    def start_before_end(self):
+        if self.start >= self.end:
+            raise ValueError("start must be less than end")
+        return self
+
 
 class ExportRequest(BaseModel):
     edits: list[EditRange]
-    format: str = "mp3"
+    format: Literal["mp3", "wav", "ogg"] = "mp3"
+
+
+_MEDIA_TYPES = {"mp3": "audio/mpeg", "wav": "audio/wav", "ogg": "audio/ogg"}
 
 
 def _get_keep_segments(duration: float, deletions: list[EditRange]) -> list[dict]:
@@ -186,14 +195,17 @@ async def export_audio(
         except Exception as e:
             raise HTTPException(500, f"Failed to download audio: {e}")
 
+    def _run_ffprobe():
+        return subprocess.check_output([
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            audio_path,
+        ])
+
     try:
         duration = float(
-            subprocess.check_output([
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                audio_path,
-            ]).decode().strip()
+            (await asyncio.get_running_loop().run_in_executor(None, _run_ffprobe)).decode().strip()
         )
     except Exception as e:
         raise HTTPException(500, f"ffprobe failed: {e}")
@@ -235,12 +247,15 @@ async def export_audio(
     os.makedirs(EXPORT_DIR, exist_ok=True)
     output_path = os.path.join(EXPORT_DIR, f"{linear_id}_edited.{body.format}")
 
-    try:
+    def _run_ffmpeg():
         subprocess.run(
             ["ffmpeg", "-y", "-i", audio_path, "-filter_complex", filter_complex, "-map", map_label, output_path],
             check=True,
             capture_output=True,
         )
+
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, _run_ffmpeg)
     except subprocess.CalledProcessError as e:
         raise HTTPException(500, f"ffmpeg failed: {e.stderr.decode()}")
 
@@ -249,6 +264,6 @@ async def export_audio(
 
     return Response(
         content=content,
-        media_type="audio/mpeg",
-        headers={"Content-Disposition": f"attachment; filename={linear_id}_edited.{body.format}"},
+        media_type=_MEDIA_TYPES[body.format],
+        headers={"Content-Disposition": f'attachment; filename="{linear_id}_edited.{body.format}"'},
     )
