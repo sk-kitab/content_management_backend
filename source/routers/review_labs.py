@@ -214,7 +214,7 @@ async def export_audio(
         filters.append(f"[0:a]volume=0:enable='{enable_expr}'[muted]")
         base_stream = "[muted]"
 
-    if base_stream != "[0:a]" and len(keep_segments) > 1:
+    if len(keep_segments) > 1:
         split_labels = "".join(f"[base{i}]" for i in range(len(keep_segments)))
         filters.append(f"{base_stream}asplit={len(keep_segments)}{split_labels}")
         for i, s in enumerate(keep_segments):
