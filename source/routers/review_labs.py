@@ -1,10 +1,12 @@
 import asyncio
 import json
 import os
+import subprocess
+from typing import Literal
 
 import httpx
 from deepgram import DeepgramClient
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -131,3 +133,122 @@ async def get_transcript(
         json.dump(payload, f)
 
     return TranscriptResponse(**payload)
+
+
+class EditRange(BaseModel):
+    type: Literal["delete", "mute"]
+    start: float
+    end: float
+
+
+class ExportRequest(BaseModel):
+    edits: list[EditRange]
+    format: str = "mp3"
+
+
+def _get_keep_segments(duration: float, deletions: list[EditRange]) -> list[dict]:
+    segments: list[dict] = []
+    cursor = 0.0
+    for d in sorted(deletions, key=lambda x: x.start):
+        if cursor < d.start:
+            segments.append({"start": cursor, "end": d.start})
+        cursor = d.end
+    if cursor < duration:
+        segments.append({"start": cursor, "end": duration})
+    return segments
+
+
+@router.post("/{linear_id}/export")
+async def export_audio(
+    linear_id: str,
+    body: ExportRequest,
+    language: str = "english",
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(Summary).where(
+            Summary.linear_id == linear_id,
+            Summary.language == language,
+        )
+    )
+    summary = result.scalar_one_or_none()
+    if not summary:
+        raise HTTPException(404, f"Summary {linear_id} not found")
+    if not summary.audio_url:
+        raise HTTPException(400, "Summary has no audio URL")
+
+    os.makedirs(AUDIO_DIR, exist_ok=True)
+    ext = _infer_ext(summary.audio_url)
+    audio_path = os.path.join(AUDIO_DIR, f"{linear_id}{ext}")
+    if not os.path.exists(audio_path):
+        try:
+            await _download_audio(summary.audio_url, audio_path)
+        except Exception as e:
+            raise HTTPException(500, f"Failed to download audio: {e}")
+
+    try:
+        duration = float(
+            subprocess.check_output([
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                audio_path,
+            ]).decode().strip()
+        )
+    except Exception as e:
+        raise HTTPException(500, f"ffprobe failed: {e}")
+
+    deletions = [e for e in body.edits if e.type == "delete"]
+    mutes = [e for e in body.edits if e.type == "mute"]
+    keep_segments = _get_keep_segments(duration, deletions)
+
+    if not keep_segments:
+        raise HTTPException(400, "All audio deleted — nothing to export")
+
+    filters: list[str] = []
+    labels: list[str] = []
+    base_stream = "[0:a]"
+
+    if mutes:
+        enable_expr = "+".join(f"between(t,{m.start},{m.end})" for m in mutes)
+        filters.append(f"[0:a]volume=0:enable='{enable_expr}'[muted]")
+        base_stream = "[muted]"
+
+    if base_stream != "[0:a]" and len(keep_segments) > 1:
+        split_labels = "".join(f"[base{i}]" for i in range(len(keep_segments)))
+        filters.append(f"{base_stream}asplit={len(keep_segments)}{split_labels}")
+        for i, s in enumerate(keep_segments):
+            filters.append(f"[base{i}]atrim={s['start']}:{s['end']},asetpts=PTS-STARTPTS[a{i}]")
+            labels.append(f"[a{i}]")
+    else:
+        for i, s in enumerate(keep_segments):
+            filters.append(f"{base_stream}atrim={s['start']}:{s['end']},asetpts=PTS-STARTPTS[a{i}]")
+            labels.append(f"[a{i}]")
+
+    filter_complex = ";".join(filters)
+    if len(keep_segments) > 1:
+        filter_complex += ";" + "".join(labels) + f"concat=n={len(keep_segments)}:v=0:a=1[out]"
+        map_label = "[out]"
+    else:
+        map_label = "[a0]"
+
+    os.makedirs(EXPORT_DIR, exist_ok=True)
+    output_path = os.path.join(EXPORT_DIR, f"{linear_id}_edited.{body.format}")
+
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", audio_path, "-filter_complex", filter_complex, "-map", map_label, output_path],
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, f"ffmpeg failed: {e.stderr.decode()}")
+
+    with open(output_path, "rb") as f:
+        content = f.read()
+
+    return Response(
+        content=content,
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": f"attachment; filename={linear_id}_edited.{body.format}"},
+    )

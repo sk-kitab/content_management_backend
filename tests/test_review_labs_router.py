@@ -128,3 +128,52 @@ async def test_transcript_calls_deepgram_and_returns_words(tmp_path):
     assert data["words"][0]["word"] == "hello"
     assert data["duration"] == 1.5
     assert (transcript_dir / "SUM-TEST-english.json").exists()
+
+
+@pytest.mark.asyncio
+async def test_export_returns_audio(tmp_path):
+    session = _mock_session(_make_summary())
+    app.dependency_overrides[get_session] = lambda: session
+
+    audio_dir = tmp_path / "audio"
+    export_dir = tmp_path / "exports"
+    audio_dir.mkdir()
+    export_dir.mkdir()
+    (audio_dir / "SUM-TEST.mp3").write_bytes(b"FAKEAUDIO")
+    # Pre-create output so open() succeeds after mocked ffmpeg
+    (export_dir / "SUM-TEST_edited.mp3").write_bytes(b"EDITEDAUDIO")
+
+    with (
+        patch("source.routers.review_labs.AUDIO_DIR", str(audio_dir)),
+        patch("source.routers.review_labs.EXPORT_DIR", str(export_dir)),
+        patch("source.routers.review_labs.subprocess.check_output", return_value=b"2.5\n"),
+        patch("source.routers.review_labs.subprocess.run"),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.post(
+                "/api/review-labs/SUM-TEST/export",
+                json={"edits": [{"type": "delete", "start": 0.5, "end": 1.0}], "format": "mp3"},
+            )
+
+    app.dependency_overrides.clear()
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("audio/")
+    assert r.content == b"EDITEDAUDIO"
+
+
+@pytest.mark.asyncio
+async def test_export_404_when_summary_missing(tmp_path):
+    transcript_dir = tmp_path / "transcripts"
+    transcript_dir.mkdir()
+    session = _mock_session(None)
+    app.dependency_overrides[get_session] = lambda: session
+
+    with patch("source.routers.review_labs.TRANSCRIPT_DIR", str(transcript_dir)):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.post(
+                "/api/review-labs/DOES-NOT-EXIST/export",
+                json={"edits": [], "format": "mp3"},
+            )
+
+    app.dependency_overrides.clear()
+    assert r.status_code == 404
