@@ -33,6 +33,10 @@ class Summary(Base):
     copyright_status: Mapped[str | None] = mapped_column(String)
     violations_count: Mapped[int] = mapped_column(Integer, default=0)
     restructured: Mapped[bool] = mapped_column(Boolean, default=False)
+    summarisation_status: Mapped[str | None] = mapped_column(String)
+    copyright_report: Mapped[dict | None] = mapped_column(JSONB)
+    copyright_revised_summary: Mapped[str | None] = mapped_column(Text)
+    pdf_supabase_path: Mapped[str | None] = mapped_column(Text)
 
     voice_status: Mapped[str] = mapped_column(String, default="source")
     voice_id: Mapped[str | None] = mapped_column(String)
