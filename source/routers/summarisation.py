@@ -58,9 +58,9 @@ async def _fetch_pdf(pdf_supabase_path: str, dest: str) -> None:
             follow_redirects=True,
         )
         r.raise_for_status()
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-    with open(dest, "wb") as f:
-        f.write(r.content)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "wb") as f:
+            f.write(r.content)
 
 
 def _extract_text(pdf_path: str) -> str:
@@ -125,22 +125,12 @@ async def _run_copyright_check(linear_id: str, language: str, book_text: str, fi
             )
             await session.commit()
 
-        except Exception as exc:
+        except Exception:
             await session.rollback()
             await session.execute(
                 update(Summary)
                 .where(Summary.linear_id == linear_id, Summary.language == language)
                 .values(summarisation_status="copyright_check_failed")
-            )
-            await session.execute(
-                update(PipelineJob)
-                .where(
-                    PipelineJob.linear_id == linear_id,
-                    PipelineJob.language == language,
-                    PipelineJob.job_type == "summarise",
-                    PipelineJob.status == "running",
-                )
-                .values(status="failed", error=str(exc), completed_at=datetime.now(timezone.utc))
             )
             await session.commit()
 

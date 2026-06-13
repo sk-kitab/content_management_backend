@@ -20,6 +20,8 @@ class SummaryCard(BaseModel):
     average_rating: float | None
     review_count: int
     audio_url: str | None
+    summarisation_status: str | None = None
+    pdf_supabase_path: str | None = None
 
 class SummaryDetail(SummaryCard):
     initial_summary: str | None
