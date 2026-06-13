@@ -118,18 +118,18 @@ Structure the introduction with these elements in sequence:
 def _call_gemini(user_prompt: str, system_instruction: str) -> str:
     api_key = settings.google_genai_api_key or os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        raise ValueError("GOOGLE_GENAI_API_KEY not set")
+        raise ValueError("GOOGLE_GENAI_API_KEY or GOOGLE_API_KEY must be set")
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model="gemini-2.5-pro",
         contents=user_prompt,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
-            max_output_tokens=8192,
+            max_output_tokens=16384,
             temperature=0.5,
         ),
     )
-    return response.text
+    return response.text or ""
 
 
 def generate_summary(book_text: str) -> tuple[str, str]:
