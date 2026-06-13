@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     audios_root: str = "audios"
     input_dir: str = "input"
     google_genai_api_key: str = ""
-    openai_api_key: str = ""
     supabase_books_bucket: str = "books"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
