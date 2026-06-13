@@ -60,4 +60,5 @@ logs/
 tmp/transcripts/*.json
 tmp/audio/*
 tmp/exports/*
+tmp/books/*.pdf
 !tmp/**/.gitkeep
