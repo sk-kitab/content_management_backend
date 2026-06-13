@@ -83,7 +83,7 @@ async def get_transcript(
         except Exception as e:
             raise HTTPException(500, f"Failed to download audio: {e}")
 
-    api_key = os.getenv("deepgram_apikey")
+    api_key = os.getenv("DEEPGRAM_API_KEY") or os.getenv("deepgram_apikey")
     if not api_key:
         raise HTTPException(500, "Deepgram API key not configured")
 
