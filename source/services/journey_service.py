@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
@@ -14,7 +15,7 @@ class JourneyServiceError(Exception):
     pass
 
 
-async def build_narration_prompt(
+def build_narration_prompt(
     journey_title: str,
     transformation: str,
     books: list[dict[str, Any]],
@@ -31,7 +32,7 @@ async def build_narration_prompt(
             book_parts.append(f"--- Book: {title} ---\n{summary}\n")
 
     if not book_parts:
-        raise JourneyServiceError("No book summaries found")
+        raise JourneyServiceError("No book summaries are populated yet for this journey")
 
     return (
         f"JOURNEY_TOPIC: {journey_title}\n\n"
@@ -74,17 +75,23 @@ async def generate_narration(journey_id: int, session: AsyncSession) -> str:
         raise JourneyServiceError(f"Journey {journey_id} not found")
 
     books = await get_books_with_summaries(journey_id, session)
-    user_prompt = await build_narration_prompt(
+    user_prompt = build_narration_prompt(
         journey.journey_title,
         journey.transformation or "",
         books,
     )
 
-    sections_text = summary_response_gemini(journey_prompt1, user_prompt)
+    loop = asyncio.get_event_loop()
+    sections_text = await loop.run_in_executor(None, summary_response_gemini, journey_prompt1, user_prompt)
     if not sections_text:
         raise JourneyServiceError("Gemini returned empty response for sections")
 
-    narration_text = summary_response_gemini(Guide, f"JOURNEY_FRAMEWORK:\n{sections_text}")
+    narration_text = await loop.run_in_executor(
+        None,
+        summary_response_gemini,
+        Guide,
+        f"JOURNEY_FRAMEWORK:\n{sections_text}\n\nTARGET_TRANSFORMATION: {journey.transformation or ''}\n",
+    )
     if not narration_text:
         raise JourneyServiceError("Gemini returned empty response for narration")
 

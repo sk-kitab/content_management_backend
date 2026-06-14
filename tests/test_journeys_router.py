@@ -38,17 +38,14 @@ def test_journey_prompts_importable():
     assert isinstance(journey_prompt1, str)
     assert isinstance(Guide, str)
 
-import pytest
 from source.services.journey_service import build_narration_prompt, JourneyServiceError
 
-@pytest.mark.asyncio
-async def test_build_narration_prompt_raises_on_empty_books():
+def test_build_narration_prompt_raises_on_empty_books():
     with pytest.raises(JourneyServiceError, match="No books"):
-        await build_narration_prompt("Test Journey", "fear → calm", [])
+        build_narration_prompt("Test Journey", "fear → calm", [])
 
-@pytest.mark.asyncio
-async def test_build_narration_prompt_returns_string():
+def test_build_narration_prompt_returns_string():
     books = [{"summary_title": "Book A", "final_summary": "Summary text here"}]
-    result = await build_narration_prompt("Test Journey", "fear → calm", books)
+    result = build_narration_prompt("Test Journey", "fear → calm", books)
     assert "Test Journey" in result
     assert "Summary text here" in result
