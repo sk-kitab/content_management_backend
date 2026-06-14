@@ -1,6 +1,6 @@
 # backend/models.py
 from datetime import datetime
-from sqlalchemy import String, Boolean, Integer, Float, DateTime, Text, func, ForeignKey
+from sqlalchemy import String, Boolean, Integer, Float, DateTime, Text, func, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from source.database import Base
@@ -96,15 +96,15 @@ class Journey(Base):
     linear_assignee: Mapped[str | None] = mapped_column(String)
 
     journey_title: Mapped[str] = mapped_column(Text, nullable=False)
-    type: Mapped[str | None] = mapped_column(String)
+    type: Mapped[str | None] = mapped_column(Text)
     transformation: Mapped[str | None] = mapped_column(Text)
-    categories: Mapped[str | None] = mapped_column(String)
-    theme: Mapped[str | None] = mapped_column(String)
+    categories: Mapped[str | None] = mapped_column(Text)
+    theme: Mapped[str | None] = mapped_column(Text)
     heartfulness_text: Mapped[str | None] = mapped_column(Text)
     source_csv: Mapped[str | None] = mapped_column(Text)
     row_number: Mapped[int | None] = mapped_column(Integer)
 
-    status: Mapped[str] = mapped_column(String, default="source")
+    status: Mapped[str] = mapped_column(Text, default="source")
     narration_text: Mapped[str | None] = mapped_column(Text)
     output_sections: Mapped[dict | None] = mapped_column(JSONB)
 
@@ -116,6 +116,7 @@ class Journey(Base):
 
 class JourneyBook(Base):
     __tablename__ = "journey_books"
+    __table_args__ = (UniqueConstraint("journey_id", "summary_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     journey_id: Mapped[int] = mapped_column(Integer, ForeignKey("journeys.id", ondelete="CASCADE"), nullable=False)
