@@ -1,6 +1,6 @@
 # backend/models.py
 from datetime import datetime
-from sqlalchemy import String, Boolean, Integer, Float, DateTime, Text, func
+from sqlalchemy import String, Boolean, Integer, Float, DateTime, Text, func, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from source.database import Base
@@ -85,3 +85,41 @@ class PipelineJob(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Journey(Base):
+    __tablename__ = "journeys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    linear_id: Mapped[str | None] = mapped_column(String)
+    linear_issue_id: Mapped[str | None] = mapped_column(String)
+    linear_assignee: Mapped[str | None] = mapped_column(String)
+
+    journey_title: Mapped[str] = mapped_column(Text, nullable=False)
+    type: Mapped[str | None] = mapped_column(String)
+    transformation: Mapped[str | None] = mapped_column(Text)
+    categories: Mapped[str | None] = mapped_column(String)
+    theme: Mapped[str | None] = mapped_column(String)
+    heartfulness_text: Mapped[str | None] = mapped_column(Text)
+    source_csv: Mapped[str | None] = mapped_column(Text)
+    row_number: Mapped[int | None] = mapped_column(Integer)
+
+    status: Mapped[str] = mapped_column(String, default="source")
+    narration_text: Mapped[str | None] = mapped_column(Text)
+    output_sections: Mapped[dict | None] = mapped_column(JSONB)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    narration_generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class JourneyBook(Base):
+    __tablename__ = "journey_books"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    journey_id: Mapped[int] = mapped_column(Integer, ForeignKey("journeys.id", ondelete="CASCADE"), nullable=False)
+    summary_id: Mapped[int] = mapped_column(Integer, ForeignKey("summaries.id"), nullable=False)
+    book_order: Mapped[int] = mapped_column(Integer, default=0)
+    search_title: Mapped[str | None] = mapped_column(Text)
+    summary_title: Mapped[str | None] = mapped_column(Text)
