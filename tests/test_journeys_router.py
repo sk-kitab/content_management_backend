@@ -49,3 +49,43 @@ def test_build_narration_prompt_returns_string():
     result = build_narration_prompt("Test Journey", "fear → calm", books)
     assert "Test Journey" in result
     assert "Summary text here" in result
+
+from httpx import AsyncClient, ASGITransport
+from source.main import app
+
+@pytest.mark.asyncio
+async def test_journey_kanban_returns_three_columns():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.get("/api/journeys/kanban")
+    assert r.status_code == 200
+    data = r.json()
+    assert "source" in data
+    assert "creation" in data
+    assert "push_to_linear" in data
+    assert isinstance(data["source"]["items"], list)
+
+@pytest.mark.asyncio
+async def test_journey_get_missing_returns_404():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.get("/api/journeys/JOU-DOES-NOT-EXIST")
+    assert r.status_code == 404
+
+@pytest.mark.asyncio
+async def test_journey_create_and_get():
+    payload = {
+        "journey_title": "Test Journey",
+        "linear_id": "JOU-TEST-1",
+        "status": "source",
+        "book_summary_ids": [],
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r_create = await client.post("/api/journeys", json=payload)
+        assert r_create.status_code == 201
+        created_id = r_create.json()["linear_id"]
+
+        r_get = await client.get(f"/api/journeys/{created_id}")
+        assert r_get.status_code == 200
+        assert r_get.json()["journey_title"] == "Test Journey"
+
+        # Cleanup
+        await client.delete(f"/api/journeys/{created_id}")
