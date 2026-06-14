@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +8,7 @@ from source.schemas import (
     JourneyCard, JourneyDetail, JourneyCreate, JourneyPatch,
     JourneyBookRef, JourneyKanbanBoard, JourneyKanbanColumn,
 )
-from source.services.journey_service import generate_narration, JourneyServiceError, get_books_with_summaries
+from source.services.journey_service import generate_narration, JourneyServiceError
 
 router = APIRouter(prefix="/api/journeys", tags=["journeys"])
 
@@ -102,7 +101,6 @@ async def patch_journey(
     journey = await _get_journey_or_404(linear_id, session)
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(journey, field, value)
-    journey.updated_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(journey)
 

@@ -82,10 +82,9 @@ async def test_journey_create_and_get():
         r_create = await client.post("/api/journeys", json=payload)
         assert r_create.status_code == 201
         created_id = r_create.json()["linear_id"]
-
-        r_get = await client.get(f"/api/journeys/{created_id}")
-        assert r_get.status_code == 200
-        assert r_get.json()["journey_title"] == "Test Journey"
-
-        # Cleanup
-        await client.delete(f"/api/journeys/{created_id}")
+        try:
+            r_get = await client.get(f"/api/journeys/{created_id}")
+            assert r_get.status_code == 200
+            assert r_get.json()["journey_title"] == "Test Journey"
+        finally:
+            await client.delete(f"/api/journeys/{created_id}")
