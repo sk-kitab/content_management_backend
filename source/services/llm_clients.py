@@ -5,8 +5,8 @@ from typing import Optional
 try:
     # Load environment variables from a .env file if present
     from dotenv import load_dotenv  # type: ignore
-    # Prefer project root .env (one level up from this file)
-    _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    # Prefer project root .env (two levels up from this file: services/ -> source/ -> backend/)
+    _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
     _root_env = os.path.join(_project_root, ".env")
     if os.path.exists(_root_env):
         load_dotenv(_root_env)

@@ -129,7 +129,7 @@ class JourneyCard(BaseModel):
     transformation: str | None = None
     categories: str | None = None
     theme: str | None = None
-    status: str
+    status: JOURNEY_STATUSES
     linear_assignee: str | None = None
 
 class JourneyDetail(JourneyCard):
