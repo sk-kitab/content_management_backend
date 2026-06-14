@@ -51,7 +51,7 @@ def test_build_narration_prompt_returns_string():
     assert "Summary text here" in result
 
 from httpx import AsyncClient, ASGITransport
-from source.main import app
+from backend.main import app
 
 @pytest.mark.asyncio
 async def test_journey_kanban_returns_three_columns():

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from source.routers import summaries, pipeline, reviews, review_labs, summarisation
+from source.routers import summaries, pipeline, reviews, review_labs, summarisation, journeys
 
 app = FastAPI(title="Kitab Voice Pipeline API")
 
@@ -16,6 +16,7 @@ app.include_router(pipeline.router)
 app.include_router(reviews.router)
 app.include_router(review_labs.router)
 app.include_router(summarisation.router)
+app.include_router(journeys.router)
 
 @app.get("/health")
 async def health():
