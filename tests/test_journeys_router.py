@@ -27,3 +27,13 @@ def test_journey_patch_partial():
     patch = JourneyPatch(status="creation")
     assert patch.status == "creation"
     assert patch.narration_text is None
+
+def test_llm_clients_importable():
+    from source.services.llm_clients import summary_response_gemini, summary_response_openai
+    assert callable(summary_response_gemini)
+    assert callable(summary_response_openai)
+
+def test_journey_prompts_importable():
+    from source.services.journey_prompts import journey_prompt1, Guide
+    assert isinstance(journey_prompt1, str)
+    assert isinstance(Guide, str)
