@@ -36,5 +36,9 @@ CREATE TABLE journey_books (
 );
 
 CREATE INDEX idx_journeys_status    ON journeys(status);
-CREATE INDEX idx_journeys_linear_id ON journeys(linear_id);
+CREATE UNIQUE INDEX idx_journeys_linear_id ON journeys(linear_id) WHERE linear_id IS NOT NULL;
 CREATE INDEX idx_journey_books_jid  ON journey_books(journey_id);
+
+CREATE TRIGGER journeys_updated_at
+    BEFORE UPDATE ON journeys
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
