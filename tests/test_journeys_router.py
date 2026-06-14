@@ -1,6 +1,6 @@
 import pytest
-from backend.source.models import Journey, JourneyBook
-from backend.source.schemas import JourneyCard, JourneyDetail, JourneyCreate, JourneyPatch
+from source.models import Journey, JourneyBook
+from source.schemas import JourneyCard, JourneyDetail, JourneyCreate, JourneyPatch
 
 def test_journey_model_has_expected_columns():
     cols = {c.key for c in Journey.__table__.columns}
@@ -37,3 +37,18 @@ def test_journey_prompts_importable():
     from source.services.journey_prompts import journey_prompt1, Guide
     assert isinstance(journey_prompt1, str)
     assert isinstance(Guide, str)
+
+import pytest
+from source.services.journey_service import build_narration_prompt, JourneyServiceError
+
+@pytest.mark.asyncio
+async def test_build_narration_prompt_raises_on_empty_books():
+    with pytest.raises(JourneyServiceError, match="No books"):
+        await build_narration_prompt("Test Journey", "fear → calm", [])
+
+@pytest.mark.asyncio
+async def test_build_narration_prompt_returns_string():
+    books = [{"summary_title": "Book A", "final_summary": "Summary text here"}]
+    result = await build_narration_prompt("Test Journey", "fear → calm", books)
+    assert "Test Journey" in result
+    assert "Summary text here" in result
