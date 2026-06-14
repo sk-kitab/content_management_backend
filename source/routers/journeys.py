@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.database import get_session
@@ -83,7 +84,11 @@ async def create_journey(body: JourneyCreate, session: AsyncSession = Depends(ge
     for order, summary_id in enumerate(body.book_summary_ids):
         session.add(JourneyBook(journey_id=journey.id, summary_id=summary_id, book_order=order))
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=f"Journey with linear_id {body.linear_id!r} already exists")
     await session.refresh(journey)
 
     books = await _load_books(journey.id, session)

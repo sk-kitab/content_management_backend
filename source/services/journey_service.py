@@ -81,7 +81,7 @@ async def generate_narration(journey_id: int, session: AsyncSession) -> str:
         books,
     )
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     sections_text = await loop.run_in_executor(None, summary_response_gemini, journey_prompt1, user_prompt)
     if not sections_text:
         raise JourneyServiceError("Gemini returned empty response for sections")
