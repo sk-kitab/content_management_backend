@@ -109,3 +109,72 @@ class FilterParams(BaseModel):
     voice_name: str | None = None
     top_150: bool = False
     search: str | None = None
+
+JOURNEY_STATUSES = Literal["source", "creation", "push_to_linear"]
+
+class JourneyBookRef(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    summary_id: int
+    book_order: int
+    search_title: str | None
+    summary_title: str | None
+
+class JourneyCard(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    linear_id: str | None
+    journey_title: str
+    type: str | None = None
+    transformation: str | None = None
+    categories: str | None = None
+    theme: str | None = None
+    status: str
+    linear_assignee: str | None = None
+
+class JourneyDetail(JourneyCard):
+    linear_issue_id: str | None
+    heartfulness_text: str | None
+    source_csv: str | None
+    row_number: int | None
+    narration_text: str | None
+    output_sections: Any
+    books: list[JourneyBookRef] = []
+    created_at: datetime
+    updated_at: datetime
+    narration_generated_at: datetime | None
+    uploaded_at: datetime | None
+
+class JourneyCreate(BaseModel):
+    linear_id: str | None = None
+    linear_issue_id: str | None = None
+    linear_assignee: str | None = None
+    journey_title: str
+    type: str | None = None
+    transformation: str | None = None
+    categories: str | None = None
+    theme: str | None = None
+    heartfulness_text: str | None = None
+    source_csv: str | None = None
+    row_number: int | None = None
+    status: JOURNEY_STATUSES = "source"
+    output_sections: Any = None
+    book_summary_ids: list[int] = []
+
+class JourneyPatch(BaseModel):
+    status: JOURNEY_STATUSES | None = None
+    narration_text: str | None = None
+    output_sections: Any = None
+    linear_id: str | None = None
+    linear_issue_id: str | None = None
+    uploaded_at: datetime | None = None
+
+class JourneyKanbanColumn(BaseModel):
+    status: str
+    count: int
+    items: list[JourneyCard]
+
+class JourneyKanbanBoard(BaseModel):
+    source: JourneyKanbanColumn
+    creation: JourneyKanbanColumn
+    push_to_linear: JourneyKanbanColumn

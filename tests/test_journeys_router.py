@@ -1,5 +1,6 @@
 import pytest
 from backend.source.models import Journey, JourneyBook
+from backend.source.schemas import JourneyCard, JourneyDetail, JourneyCreate, JourneyPatch
 
 def test_journey_model_has_expected_columns():
     cols = {c.key for c in Journey.__table__.columns}
@@ -12,3 +13,17 @@ def test_journey_book_model_has_fk():
     fks = {fk.target_fullname for fk in JourneyBook.__table__.foreign_keys}
     assert any("journeys.id" in fk for fk in fks)
     assert any("summaries.id" in fk for fk in fks)
+
+def test_journey_card_fields():
+    card = JourneyCard(
+        id=1,
+        linear_id="JOU-69",
+        journey_title="Agency Reboot",
+        status="source",
+    )
+    assert card.journey_title == "Agency Reboot"
+
+def test_journey_patch_partial():
+    patch = JourneyPatch(status="creation")
+    assert patch.status == "creation"
+    assert patch.narration_text is None
