@@ -88,3 +88,27 @@ async def test_journey_create_and_get():
             assert r_get.json()["journey_title"] == "Test Journey"
         finally:
             await client.delete(f"/api/journeys/{created_id}")
+
+@pytest.mark.asyncio
+async def test_patch_journey_status():
+    payload = {
+        "journey_title": "Status Patch Test",
+        "linear_id": "JOU-TEST-PATCH",
+        "status": "source",
+        "book_summary_ids": [],
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r_create = await client.post("/api/journeys", json=payload)
+        assert r_create.status_code == 201
+        try:
+            r_patch = await client.patch("/api/journeys/JOU-TEST-PATCH", json={"status": "creation"})
+            assert r_patch.status_code == 200
+            assert r_patch.json()["status"] == "creation"
+        finally:
+            await client.delete("/api/journeys/JOU-TEST-PATCH")
+
+@pytest.mark.asyncio
+async def test_generate_narration_missing_journey():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post("/api/journeys/JOU-GHOST/generate-narration")
+    assert r.status_code == 404
