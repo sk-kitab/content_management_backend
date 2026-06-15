@@ -190,10 +190,7 @@ async def _run_summarisation(job_id: int, linear_id: str, language: str) -> None
             )
             await session.commit()
 
-            # Auto-trigger copyright check
-            asyncio.create_task(
-                _run_copyright_check(linear_id, language, book_text, final_summary)
-            )
+            await _run_copyright_check(linear_id, language, book_text, final_summary)
 
         except Exception as exc:
             await session.rollback()
@@ -326,6 +323,10 @@ async def approve(
 
     # Use revised summary if available, fall back to final_summary
     production_summary = summary.copyright_revised_summary or summary.final_summary
+    # Overwrite final_summary with the approved version (revised if violations found,
+    # original otherwise). This is intentional — voice production reads final_summary.
+    # The original Gemini output is preserved in initial_summary (key-ideas pass);
+    # final_summary holds the narrative pass and is the field voice generation consumes.
     await session.execute(
         update(Summary)
         .where(Summary.linear_id == linear_id, Summary.language == language)
