@@ -104,6 +104,11 @@ class Journey(Base):
     source_csv: Mapped[str | None] = mapped_column(Text)
     row_number: Mapped[int | None] = mapped_column(Integer)
 
+    tagline: Mapped[str | None] = mapped_column(Text)
+    overview: Mapped[str | None] = mapped_column(Text)
+    cover_page: Mapped[str | None] = mapped_column(Text)
+    duration: Mapped[int | None] = mapped_column(Integer)
+
     status: Mapped[str] = mapped_column(Text, default="source")
     narration_text: Mapped[str | None] = mapped_column(Text)
     output_sections: Mapped[dict | None] = mapped_column(JSONB)

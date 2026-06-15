@@ -131,12 +131,16 @@ class JourneyCard(BaseModel):
     theme: str | None = None
     status: JOURNEY_STATUSES
     linear_assignee: str | None = None
+    tagline: str | None = None
+    cover_page: str | None = None
+    duration: int | None = None
 
 class JourneyDetail(JourneyCard):
     linear_issue_id: str | None
     heartfulness_text: str | None
     source_csv: str | None
     row_number: int | None
+    overview: str | None
     narration_text: str | None
     output_sections: Any
     books: list[JourneyBookRef] = []
