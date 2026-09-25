@@ -3,7 +3,10 @@
 Migration: read journey JSON files from journeys/ folder → update journeys table.
 
 Updates output_sections, tagline, overview, cover_page, duration for all
-journeys matched by linear_id. Skips any entry whose id is 'JOU-NEW'.
+English journeys matched by linear_id. Skips any entry whose id is 'JOU-NEW'.
+Scoped to language='english' -- see migrate_journeys_hindi.py for the Hindi
+counterpart; do not drop the language filter or this will also overwrite
+the Hindi rows sharing the same linear_id.
 
 Usage:
     cd /home/saurav/kitab/content_management_system
@@ -56,7 +59,7 @@ async def migrate():
             continue
 
         existing_id = await conn.fetchval(
-            "SELECT id FROM journeys WHERE linear_id = $1", linear_id
+            "SELECT id FROM journeys WHERE linear_id = $1 AND language = 'english'", linear_id
         )
         if not existing_id:
             print(f"  MISS {path.name}: linear_id={linear_id} not in DB")
@@ -73,7 +76,7 @@ async def migrate():
                 overview        = $3,
                 cover_page      = $4,
                 duration        = $5
-            WHERE linear_id = $6
+            WHERE linear_id = $6 AND language = 'english'
             """,
             json.dumps(content) if content else None,
             d.get("tagline"),
