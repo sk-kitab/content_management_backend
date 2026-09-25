@@ -124,6 +124,7 @@ class JourneyCard(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     linear_id: str | None
+    language: str = "english"
     journey_title: str
     type: str | None = None
     transformation: str | None = None
@@ -153,6 +154,7 @@ class JourneyCreate(BaseModel):
     linear_id: str | None = None
     linear_issue_id: str | None = None
     linear_assignee: str | None = None
+    language: str = "english"
     journey_title: str
     type: str | None = None
     transformation: str | None = None

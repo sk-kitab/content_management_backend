@@ -14,13 +14,13 @@ from source.services.journey_service import generate_narration, JourneyServiceEr
 router = APIRouter(prefix="/api/journeys", tags=["journeys"])
 
 
-async def _get_journey_or_404(linear_id: str, session: AsyncSession) -> Journey:
+async def _get_journey_or_404(linear_id: str, language: str, session: AsyncSession) -> Journey:
     result = await session.execute(
-        select(Journey).where(Journey.linear_id == linear_id)
+        select(Journey).where(Journey.linear_id == linear_id, Journey.language == language)
     )
     journey = result.scalar_one_or_none()
     if not journey:
-        raise HTTPException(status_code=404, detail=f"Journey {linear_id} not found")
+        raise HTTPException(status_code=404, detail=f"Journey {linear_id} ({language}) not found")
     return journey
 
 
@@ -34,8 +34,8 @@ async def _load_books(journey_id: int, session: AsyncSession) -> list[JourneyBoo
 
 
 @router.get("/kanban", response_model=JourneyKanbanBoard)
-async def get_kanban(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(Journey))
+async def get_kanban(language: str = "english", session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(Journey).where(Journey.language == language))
     rows = result.scalars().all()
 
     columns: dict[str, list[JourneyCard]] = {
@@ -53,8 +53,8 @@ async def get_kanban(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/{linear_id}", response_model=JourneyDetail)
-async def get_journey(linear_id: str, session: AsyncSession = Depends(get_session)):
-    journey = await _get_journey_or_404(linear_id, session)
+async def get_journey(linear_id: str, language: str = "english", session: AsyncSession = Depends(get_session)):
+    journey = await _get_journey_or_404(linear_id, language, session)
     books = await _load_books(journey.id, session)
     detail = JourneyDetail.model_validate(journey)
     detail.books = books
@@ -67,6 +67,7 @@ async def create_journey(body: JourneyCreate, session: AsyncSession = Depends(ge
         linear_id=body.linear_id,
         linear_issue_id=body.linear_issue_id,
         linear_assignee=body.linear_assignee,
+        language=body.language,
         journey_title=body.journey_title,
         type=body.type,
         transformation=body.transformation,
@@ -88,7 +89,7 @@ async def create_journey(body: JourneyCreate, session: AsyncSession = Depends(ge
         await session.commit()
     except IntegrityError:
         await session.rollback()
-        raise HTTPException(status_code=409, detail=f"Journey with linear_id {body.linear_id!r} already exists")
+        raise HTTPException(status_code=409, detail=f"Journey with linear_id {body.linear_id!r} ({body.language}) already exists")
     await session.refresh(journey)
 
     books = await _load_books(journey.id, session)
@@ -101,9 +102,10 @@ async def create_journey(body: JourneyCreate, session: AsyncSession = Depends(ge
 async def patch_journey(
     linear_id: str,
     body: JourneyPatch,
+    language: str = "english",
     session: AsyncSession = Depends(get_session),
 ):
-    journey = await _get_journey_or_404(linear_id, session)
+    journey = await _get_journey_or_404(linear_id, language, session)
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(journey, field, value)
     await session.commit()
@@ -118,9 +120,10 @@ async def patch_journey(
 @router.post("/{linear_id}/generate-narration", response_model=JourneyDetail)
 async def trigger_generate_narration(
     linear_id: str,
+    language: str = "english",
     session: AsyncSession = Depends(get_session),
 ):
-    journey = await _get_journey_or_404(linear_id, session)
+    journey = await _get_journey_or_404(linear_id, language, session)
     try:
         await generate_narration(journey.id, session)
     except JourneyServiceError as e:
@@ -133,7 +136,7 @@ async def trigger_generate_narration(
 
 
 @router.delete("/{linear_id}", status_code=204)
-async def delete_journey(linear_id: str, session: AsyncSession = Depends(get_session)):
-    journey = await _get_journey_or_404(linear_id, session)
+async def delete_journey(linear_id: str, language: str = "english", session: AsyncSession = Depends(get_session)):
+    journey = await _get_journey_or_404(linear_id, language, session)
     await session.delete(journey)
     await session.commit()

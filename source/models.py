@@ -94,6 +94,7 @@ class Journey(Base):
     linear_id: Mapped[str | None] = mapped_column(String)
     linear_issue_id: Mapped[str | None] = mapped_column(String)
     linear_assignee: Mapped[str | None] = mapped_column(String)
+    language: Mapped[str] = mapped_column(Text, default="english", server_default="english")
 
     journey_title: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str | None] = mapped_column(Text)
