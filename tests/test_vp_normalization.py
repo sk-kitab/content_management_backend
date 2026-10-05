@@ -55,3 +55,30 @@ def test_normalize_safely_keeps_text_and_notes_failure():
     notes: list[str] = []
     assert normalize_safely(pipe, "Take 3 steps.", notes) == "Take 3 steps."
     assert len(notes) == 1 and "quota exceeded" in notes[0]
+
+
+def test_gemini_drops_null_and_stringifies_values():
+    from types import SimpleNamespace
+    from voice_pipeline.normalization.llm_normalizer import GeminiNormalizer
+
+    class Models:
+        def generate_content(self, **kw):
+            return SimpleNamespace(text='{"a": 5, "b": null, "c": "x"}')
+
+    g = GeminiNormalizer.__new__(GeminiNormalizer)
+    g._client = SimpleNamespace(models=Models())
+    g._model = "m"
+    out = g.normalize_batch([{"key": "a", "text": "5", "category": "plain_number"}], "en")
+    assert out == {"a": "5", "c": "x"}
+
+
+def test_json_cache_concurrent_flushes_merge(tmp_path):
+    path = tmp_path / "c.json"
+    a, b = JSONFileCache(path), JSONFileCache(path)
+    a.set("k1", "one")
+    b.set("k2", "two")
+    a.flush()
+    b.flush()
+    fresh = JSONFileCache(path)
+    assert fresh.get("k1") == "one" and fresh.get("k2") == "two"
+    assert not list(tmp_path.glob("*.tmp"))

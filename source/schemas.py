@@ -2,7 +2,7 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 VOICE_STATUSES = Literal["source", "voice_text", "voice", "voice_review"]
 AUDIO_ENGINES = Literal["legacy", "v3"]
@@ -65,6 +65,17 @@ class JobCreate(BaseModel):
     job_type: Literal["voice_text", "audio", "upload"]
     engine: AUDIO_ENGINES | None = None      # audio jobs: overrides summaries.audio_engine
     steps: dict[str, bool] | None = None     # v3 only: overrides profile step defaults
+
+    @field_validator("steps")
+    @classmethod
+    def _known_steps(cls, v):
+        if v is None:
+            return v
+        from voice_pipeline.profiles import STEP_KEYS
+        unknown = sorted(set(v) - set(STEP_KEYS))
+        if unknown:
+            raise ValueError(f"unknown step keys: {unknown}; allowed: {sorted(STEP_KEYS)}")
+        return v
 
 class JobStatus(BaseModel):
     model_config = ConfigDict(from_attributes=True)

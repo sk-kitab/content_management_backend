@@ -38,8 +38,7 @@ def apply_audio_result(summary, result: AudioResult, now: datetime) -> None:
     summary.audio_url = result.url
     summary.audio_generated_at = now
     summary.supabase_uploaded = True
-    if result.qc_report is not None:
-        summary.audio_qc_report = result.qc_report
+    summary.audio_qc_report = result.qc_report  # None for legacy: clears a stale v3 report
 
 
 def _generate_v3(linear_id: str, language: str, voice_id: str | None, title: str,

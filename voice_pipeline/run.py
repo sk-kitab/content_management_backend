@@ -7,6 +7,7 @@ that can fail without spending credits (language, ffmpeg, empty text) is checked
 """
 from __future__ import annotations
 
+import fcntl
 import json
 import logging
 from dataclasses import dataclass
@@ -114,6 +115,29 @@ def run(linear_id: str, language: str, title: str, final_summary: str, voice_id:
                          pronunciation_dictionary_locators=pronunciation.locators if pronunciation else ())
     run_dir = Path(work_root or Path(settings.audios_root) / "v3_work") / linear_id / lang
     run_dir.mkdir(parents=True, exist_ok=True)
+    lock_fh = open(run_dir / ".lock", "w")
+    try:
+        fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock_fh.close()
+        raise RuntimeError(f"v3 run already in progress for {linear_id}/{lang}") from None
+    try:
+        return _run_locked(run_dir, linear_id, lang, st, notes, chunks, preset, voice, client, qc_remote)
+    finally:
+        fcntl.flock(lock_fh, fcntl.LOCK_UN)
+        lock_fh.close()
+
+
+def _cleanup_intermediates(run_dir: Path) -> None:
+    """Drop the large files a re-run never needs (raw takes, pre-master join)."""
+    (run_dir / "narration_joined.wav").unlink(missing_ok=True)
+    for pattern in ("*.raw.wav", "*.raw.alignment.json"):
+        for f in (run_dir / "chunks").glob(pattern):
+            f.unlink(missing_ok=True)
+
+
+def _run_locked(run_dir, linear_id, lang, st, notes, chunks, preset, voice, client, qc_remote) -> RunResult:
+    from source.config import settings
 
     if client is None:
         client = ElevenLabsClient(settings.elevenlabs_api_key)
@@ -132,4 +156,5 @@ def run(linear_id: str, language: str, title: str, final_summary: str, voice_id:
     offsets = chunk_offsets({"chunks": summary["assembly_chunks"]}, chunks)
     report = build_report(summary, offsets, st, notes)
     (run_dir / "audio_qc_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False, default=float))
+    _cleanup_intermediates(run_dir)
     return RunResult(Path(summary["output"]), report)

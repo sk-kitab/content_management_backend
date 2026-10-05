@@ -1,3 +1,5 @@
+import fcntl
+
 import pytest
 
 from tests.vp_fakes import FakeQCRemote, FakeTTSClient, PermanentAPIError
@@ -91,3 +93,29 @@ def test_missing_resemblyzer_is_noted(tmp_path, monkeypatch):
     monkeypatch.setattr(run_module, "speaker_similarity_available", lambda: False)
     result = go(tmp_path)
     assert "speaker similarity skipped: resemblyzer not installed" in result.report["notes"]
+
+
+def test_concurrent_run_on_same_summary_is_refused_before_tts(tmp_path):
+    lock_dir = tmp_path / "SUM-1" / "en"
+    lock_dir.mkdir(parents=True)
+    with open(lock_dir / ".lock", "w") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        client = FakeTTSClient()
+        with pytest.raises(RuntimeError, match="already in progress"):
+            go(tmp_path, client=client)
+    assert client.calls == []
+
+
+def test_lock_released_after_run(tmp_path):
+    go(tmp_path)
+    go(tmp_path)  # second run on the same dir must not be refused
+
+
+def test_large_intermediates_removed_after_success(tmp_path):
+    result = go(tmp_path)
+    run_dir = tmp_path / "SUM-1" / "en"
+    assert not list(run_dir.rglob("*.raw.wav"))
+    assert not list(run_dir.rglob("*.raw.alignment.json"))
+    assert not (run_dir / "narration_joined.wav").exists()
+    assert result.mp3_path.exists()
+    assert list((run_dir / "chunks").glob("*.wav"))

@@ -69,7 +69,7 @@ class GeminiNormalizer(LLMNormalizer):
         result = json.loads(response.text)
         if not isinstance(result, dict):
             raise ValueError(f"Expected a JSON object from the model, got: {type(result)}")
-        return result
+        return {k: str(v) for k, v in result.items() if v is not None}
 
 
 class NullNormalizer(LLMNormalizer):

@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -39,10 +38,22 @@ def test_apply_result_pass_and_review():
     assert s.voice_status == "voice_review"
 
 
-def test_legacy_result_keeps_existing_report():
+def test_legacy_result_clears_v3_report():
     s = SimpleNamespace(audio_qc_report={"old": True})
     apply_audio_result(s, AudioResult("u"), NOW)
-    assert s.audio_qc_report == {"old": True}
+    assert s.audio_qc_report is None
+
+
+def test_job_create_rejects_unknown_step_keys():
+    with pytest.raises(ValidationError, match="qcfix"):
+        JobCreate(linear_id="SUM-1", language="english", job_type="audio", steps={"qcfix": False})
+
+
+def test_legacy_engine_returns_url_or_none(monkeypatch):
+    monkeypatch.setattr(audio_service, "_generate_legacy", lambda *a: "https://u")
+    assert audio_service.generate_audio("SUM-1", "english", "v1") == AudioResult("https://u")
+    monkeypatch.setattr(audio_service, "_generate_legacy", lambda *a: None)
+    assert audio_service.generate_audio("SUM-1", "english", "v1") is None
 
 
 def test_v3_engine_runs_pipeline_and_uploads(monkeypatch, tmp_path):

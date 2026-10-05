@@ -15,6 +15,8 @@ later without touching pipeline.py.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -56,7 +58,25 @@ class JSONFileCache(NormalizationCache):
     def flush(self) -> None:
         if not self._dirty:
             return
-        self.path.write_text(json.dumps(self._data, indent=2, ensure_ascii=False, sort_keys=True))
+        merged: dict[str, str] = {}
+        if self.path.exists():
+            try:
+                on_disk = json.loads(self.path.read_text())
+                if isinstance(on_disk, dict):
+                    merged.update(on_disk)
+            except (OSError, ValueError):
+                pass
+        merged.update(self._data)
+        self._data = merged
+        fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=self.path.name + ".", suffix=".tmp")
+        try:
+            os.chmod(tmp, 0o644)
+            with os.fdopen(fd, "w") as fh:
+                fh.write(json.dumps(merged, indent=2, ensure_ascii=False, sort_keys=True))
+            os.replace(tmp, self.path)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
         self._dirty = False
 
     def __enter__(self) -> "JSONFileCache":

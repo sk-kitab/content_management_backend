@@ -52,3 +52,32 @@ def test_qc_off_needs_no_remote(tmp_path):
 def test_assess_without_remote_is_an_error(tmp_path):
     with pytest.raises(ValueError):
         produce(tmp_path, make_chunks(TEXTS), PRESET, FakeTTSClient(), None, qc_assess=True)
+
+
+class SlowChunkRemote(FakeQCRemote):
+    """align() stretches one chunk's word timings x2 (half the syllables/sec)."""
+
+    def __init__(self, slow_id, **kw):
+        super().__init__(**kw)
+        self.slow_id = slow_id
+
+    def align(self, wav, text):
+        out = super().align(wav, text)
+        if wav.stem == self.slow_id:
+            for w in out["words"]:
+                w["start"], w["end"] = w["start"] * 2, w["end"] * 2
+        return out
+
+
+def test_pace_outlier_gets_exactly_one_retry(tmp_path):
+    texts = TEXTS + ["Every evening the street lights come on one by one, and the town settles into a hush."]
+    chunks = make_chunks(texts)
+    slow = chunks[2].id
+    client = FakeTTSClient()
+    summary = produce(tmp_path, chunks, PRESET, client, SlowChunkRemote(slow), overlap=False, qc_fix=True)
+    assert summary["retries"][0]["pace"] == [slow]
+    pace_entries = [e for e in summary["retries"] if slow in e["pace"]]
+    assert len(pace_entries) == 1  # still slow after the retry, but never pace-retried again
+    regen = [c for c in client.calls if c["seed"] == PRESET.seed + 1000]
+    assert [c["text"] for c in regen] == [texts[2]]
+    assert len(client.calls) == 5
