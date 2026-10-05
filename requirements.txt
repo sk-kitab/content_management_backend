@@ -14,9 +14,16 @@ python-multipart==0.0.9
 pytest==8.3.3
 pytest-asyncio==0.24.0
 # modules/ dependencies
-elevenlabs>=2.0.0
 supabase>=2.0.0
 pydub>=0.25.1
 mutagen>=1.47.0
 tqdm>=4.60.0
 audioop-lts>=0.2.2  # Python 3.13 audioop backport (pydub dependency)
+elevenlabs>=2.43.0
+# voice_pipeline/ (v3 engine) dependencies
+numpy>=2.0
+soundfile>=0.12
+librosa>=0.10.2
+pyloudnorm>=0.1.1
+indic-transliteration>=2.3
+# optional: resemblyzer (voice-similarity QC; pulls torch) — pip install resemblyzer

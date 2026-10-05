@@ -62,3 +62,6 @@ tmp/audio/*
 tmp/exports/*
 tmp/books/*.pdf
 !tmp/**/.gitkeep
+
+# voice_pipeline/ work output
+audios/
