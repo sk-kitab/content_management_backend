@@ -115,13 +115,13 @@ def chunk_section(heading: str, paragraphs: list[str],
     # merge undersized units into the following one (or the previous one, at the section end)
     merged: list[tuple[str, str]] = []
     for text, boundary in units:
-        if merged and len(merged[-1][0]) < min_chars and len(merged[-1][0]) + len(text) + 1 <= max_chars:
+        if merged and len(merged[-1][0]) < min_chars and len(merged[-1][0]) + len(text) + 2 <= max_chars:
             prev_text, _ = merged.pop()
             merged.append((f"{prev_text}\n\n{text}", boundary))
         else:
             merged.append((text, boundary))
     if len(merged) > 1 and len(merged[-1][0]) < min_chars and \
-            len(merged[-2][0]) + len(merged[-1][0]) + 1 <= max_chars:
+            len(merged[-2][0]) + len(merged[-1][0]) + 2 <= max_chars:
         last_text, last_b = merged.pop()
         prev_text, _ = merged.pop()
         merged.append((f"{prev_text}\n\n{last_text}", last_b))

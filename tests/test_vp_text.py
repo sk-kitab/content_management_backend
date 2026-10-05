@@ -92,3 +92,23 @@ def test_unpunctuated_long_paragraph_is_hard_wrapped_without_losing_words():
     chunks = chunk_title([("intro", "", [" ".join(words)])], "en")
     assert all(c.chars <= MAX_CHARS for c in chunks)
     assert " ".join(c.text for c in chunks).split() == words
+
+
+def test_merge_respects_separator_length():
+    # Regression: merge conditions used +1 but join uses "\n\n" (2 chars), causing 951-char chunks
+    # This test ensures that even when paragraphs fit with +1, merge doesn't happen if +2 would exceed
+    para_a = "a" * 200 + "."  # 201 chars
+    para_b = "b" * 747 + "."  # 748 chars
+    # With separator: 201 + 2 + 748 = 951 chars (exceeds MAX_CHARS=950)
+    chunks = chunk_title([("intro", "", [para_a, para_b])], "en")
+    assert all(c.chars <= MAX_CHARS for c in chunks), f"Found chunk with {max(c.chars for c in chunks)} chars"
+    assert len(chunks) == 2  # Should not merge
+
+
+def test_merge_allows_exact_max_chars_with_separator():
+    # Inverse: verify that paragraphs that fit exactly WITH the separator still merge
+    para_a = "a" * 200 + "."  # 201 chars
+    para_b = "b" * 747       # 747 chars (201 + 2 + 747 = 950, exactly MAX_CHARS)
+    chunks = chunk_title([("intro", "", [para_a, para_b])], "en")
+    assert all(c.chars <= MAX_CHARS for c in chunks)
+    assert len(chunks) == 1  # Should merge into one chunk of exactly 950 chars
