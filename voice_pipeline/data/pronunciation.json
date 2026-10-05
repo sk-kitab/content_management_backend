@@ -1,7 +1,8 @@
 {
-  "en": {"aliases": {}, "locators": []},
+  "en": {"aliases": {"Actionable. Step": "Actionable Step"}, "locators": []},
   "hi": {
     "aliases": {
+      "Actionable. Step": "Actionable Step",
       "Brahmanand": "ब्रह्मानंद",
       "Satguru": "सतगुरु",
       "Santmat": "संतमत",

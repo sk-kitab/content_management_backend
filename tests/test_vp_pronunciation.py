@@ -13,6 +13,21 @@ def test_longest_key_wins():
     assert p.apply("By Kamlesh D. Patel.") == "By कमलेश डी पटेल."
 
 
+def test_longest_key_wins_with_same_prefix():
+    # Test that longest-first sort is required: "Ram Chandra" starts with "Ram"
+    # but must be matched first. Verify with both insertion orders.
+    text = "Ram Chandra came."
+    expected = "रामचंद्र came."
+
+    # Order 1: short key first (would fail without sort)
+    p1 = Pronunciation(aliases={"Ram": "राम", "Ram Chandra": "रामचंद्र"})
+    assert p1.apply(text) == expected
+
+    # Order 2: long key first (would pass even without sort due to insertion order)
+    p2 = Pronunciation(aliases={"Ram Chandra": "रामचंद्र", "Ram": "राम"})
+    assert p2.apply(text) == expected
+
+
 def test_missing_file_and_unknown_language_are_no_ops(tmp_path):
     assert Pronunciation.load("en", tmp_path / "nope.json").apply("Karma") == "Karma"
     path = tmp_path / "p.json"
@@ -29,4 +44,4 @@ def test_locators_are_parsed(tmp_path):
 def test_seeded_file_has_hindi_entries():
     p = Pronunciation.load("hi")
     assert p.aliases["Satguru"] == "सतगुरु"
-    assert Pronunciation.load("en").aliases == {}
+    assert Pronunciation.load("en").aliases == {"Actionable. Step": "Actionable Step"}

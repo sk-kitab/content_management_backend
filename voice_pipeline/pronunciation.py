@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_PATH = Path(__file__).resolve().parent / "data" / "pronunciation.json"
-_WORD = r"\wऀ-ॿ"  # \w skips Devanagari vowel signs, so include the block explicitly
+_WORD = r"\w\u0900-\u097f"  # \w skips Devanagari vowel signs, so include the block explicitly
 
 
 @dataclass
