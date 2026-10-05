@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 
-VOICE_STATUSES = Literal["source", "voice_text", "voice"]
+VOICE_STATUSES = Literal["source", "voice_text", "voice", "voice_review"]
+AUDIO_ENGINES = Literal["legacy", "v3"]
 
 class SummaryCard(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -33,6 +34,8 @@ class SummaryDetail(SummaryCard):
     voice_id: str | None
     voice_text_chapters: Any
     audio_chapter_urls: Any
+    audio_engine: str = "legacy"
+    audio_qc_report: Any = None
     created_at: datetime
     updated_at: datetime
     voice_text_generated_at: datetime | None
@@ -44,6 +47,7 @@ class SummaryPatch(BaseModel):
     voice_name: str | None = None
     voice_id: str | None = None
     audio_url: str | None = None
+    audio_engine: AUDIO_ENGINES | None = None
 
 class KanbanColumn(BaseModel):
     status: str
@@ -59,6 +63,8 @@ class JobCreate(BaseModel):
     linear_id: str
     language: str
     job_type: Literal["voice_text", "audio", "upload"]
+    engine: AUDIO_ENGINES | None = None      # audio jobs: overrides summaries.audio_engine
+    steps: dict[str, bool] | None = None     # v3 only: overrides profile step defaults
 
 class JobStatus(BaseModel):
     model_config = ConfigDict(from_attributes=True)

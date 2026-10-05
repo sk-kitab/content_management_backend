@@ -8,7 +8,7 @@ from source.database import get_session, SessionLocal
 from source.models import Summary, PipelineJob
 from source.schemas import JobCreate, JobStatus
 from source.services.voice_service import generate_voice_text
-from source.services.audio_service import generate_audio
+from source.services.audio_service import apply_audio_result, generate_audio, resolve_engine
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
@@ -45,15 +45,14 @@ async def _run_job(job_id: int, job: JobCreate) -> None:
                     raise ValueError("generate_voice_text returned False — no output produced")
 
             elif job.job_type == "audio":
-                url = await asyncio.to_thread(
+                engine = resolve_engine(job.engine, summary.audio_engine)
+                result = await asyncio.to_thread(
                     generate_audio,
-                    summary.linear_id, summary.language, summary.voice_id
+                    summary.linear_id, summary.language, summary.voice_id,
+                    engine, summary.title or "", summary.final_summary or "", job.steps,
                 )
-                if url:
-                    summary.voice_status = "voice"
-                    summary.audio_url = url
-                    summary.audio_generated_at = datetime.now(timezone.utc)
-                    summary.supabase_uploaded = True
+                if result:
+                    apply_audio_result(summary, result, datetime.now(timezone.utc))
                 else:
                     raise ValueError("generate_audio returned None — audio generation failed")
 

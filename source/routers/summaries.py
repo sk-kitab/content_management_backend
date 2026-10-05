@@ -25,6 +25,12 @@ def _apply_filters(q, language: str, category: str | None, voice_name: str | Non
         q = q.where(or_(Summary.title.ilike(like), Summary.linear_id.ilike(like)))
     return q
 
+def kanban_column(voice_status: str | None) -> str:
+    """Board column for a voice status; v3 audio that needs a listen sits with finished audio."""
+    if voice_status == "voice_review":
+        return "voice"
+    return voice_status if voice_status in ("source", "voice_text", "voice") else "source"
+
 @router.get("/kanban", response_model=KanbanBoard)
 async def get_kanban(
     language: str = "english",
@@ -40,7 +46,7 @@ async def get_kanban(
 
     columns: dict[str, list[SummaryCard]] = {"source": [], "voice_text": [], "voice": []}
     for row in rows:
-        col = row.voice_status if row.voice_status in columns else "source"
+        col = kanban_column(row.voice_status)
         columns[col].append(SummaryCard.model_validate(row))
 
     return KanbanBoard(

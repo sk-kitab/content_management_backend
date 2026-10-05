@@ -45,6 +45,8 @@ class Summary(Base):
 
     audio_url: Mapped[str | None] = mapped_column(Text)
     audio_chapter_urls: Mapped[dict | None] = mapped_column(JSONB)
+    audio_engine: Mapped[str] = mapped_column(String, default="legacy", server_default="legacy")
+    audio_qc_report: Mapped[dict | None] = mapped_column(JSONB)
     supabase_uploaded: Mapped[bool] = mapped_column(Boolean, default=False)
     is_uploaded: Mapped[bool] = mapped_column(Boolean, default=False)
 
